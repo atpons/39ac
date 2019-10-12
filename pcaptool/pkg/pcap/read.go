@@ -9,18 +9,32 @@ import (
 	"github.com/atpons/39ac/pcaptool/pkg/util"
 )
 
+type PacketList []Packet
+
+func (p *PacketList) Print() {
+	for index, v := range *p {
+		fmt.Printf("Num: %d\n", index)
+		v.RecHdr.Print()
+		v.RecData.Print()
+	}
+}
+
 type Data struct {
-	Hdr    Hdr
-	RecHdr RecHdr
+	Hdr  Hdr
+	Data PacketList
 }
 
 type Field interface {
 	Print()
 }
 
+type RecData interface {
+	Print()
+}
+
 func (d *Data) Print() {
 	d.Hdr.Print()
-	d.RecHdr.Print()
+	d.Data.Print()
 }
 
 type Hdr struct {
@@ -31,6 +45,11 @@ type Hdr struct {
 	SigFigs      uint32
 	SnapLen      uint32
 	Network      uint32
+}
+
+type Packet struct {
+	RecHdr  RecHdr
+	RecData RecData
 }
 
 type RecHdr struct {
@@ -70,7 +89,13 @@ func Read(name string) Data {
 
 	buf := bufio.NewReader(file)
 	p.Hdr = readHead(buf)
-	p.RecHdr = readRecHdr(buf)
+	for {
+		packet, err := readPacket(buf)
+		if err != nil {
+			break
+		}
+		p.Data = append(p.Data, *packet)
+	}
 	return p
 }
 
@@ -86,13 +111,22 @@ func readHead(buf *bufio.Reader) Hdr {
 	return hdr
 }
 
-func readRecHdr(buf *bufio.Reader) RecHdr {
+func readRecHdr(buf *bufio.Reader) (*RecHdr, error) {
 	recHdr := RecHdr{}
-	readHeaderField(buf, &recHdr.TsSec)
-	readHeaderField(buf, &recHdr.TsUsec)
-	readHeaderField(buf, &recHdr.InclLen)
-	readHeaderField(buf, &recHdr.OrigLen)
-	return recHdr
+	if err := readHeaderField(buf, &recHdr.TsSec); err != nil {
+		return nil, err
+	}
+
+	if err := readHeaderField(buf, &recHdr.TsUsec); err != nil {
+		return nil, err
+	}
+	if err := readHeaderField(buf, &recHdr.InclLen); err != nil {
+		return nil, err
+	}
+	if err := readHeaderField(buf, &recHdr.OrigLen); err != nil {
+		return nil, err
+	}
+	return &recHdr, nil
 }
 
 func readHeaderField(buf *bufio.Reader, data interface{}) error {
@@ -101,4 +135,43 @@ func readHeaderField(buf *bufio.Reader, data interface{}) error {
 		return err
 	}
 	return nil
+}
+
+type RawData struct {
+	Data []byte
+}
+
+func (r *RawData) Print() {
+	fmt.Printf("RawData = %#x\n", r)
+}
+
+func readPacket(buf *bufio.Reader) (*Packet, error) {
+	packet := Packet{}
+	hdr, err := readRecHdr(buf)
+	if err != nil {
+		return nil, err
+	}
+	packet.RecHdr = *hdr
+	data, err := readRawData(packet.RecHdr.InclLen, buf)
+	if err != nil {
+		return nil, err
+	}
+	packet.RecData = data
+	return &packet, err
+}
+
+func readRawData(length uint32, buf *bufio.Reader) (RecData, error) {
+	switch true {
+	case true:
+		raw := RawData{}
+		by := make([]byte, length)
+		_, err := buf.Read(by)
+		if err != nil {
+			return nil, err
+		}
+		raw.Data = by
+		return &raw, nil
+	default:
+		panic("not implemented")
+	}
 }
