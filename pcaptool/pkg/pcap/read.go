@@ -15,7 +15,9 @@ func (p *PacketList) Print() {
 	for index, v := range *p {
 		fmt.Printf("Num: %d\n", index)
 		v.RecHdr.Print()
-		v.RecData.Print()
+		for _, val := range v.RecData {
+			val.Print()
+		}
 	}
 }
 
@@ -49,7 +51,7 @@ type Hdr struct {
 
 type Packet struct {
 	RecHdr  RecHdr
-	RecData RecData
+	RecData []RecData
 }
 
 type RecHdr struct {
@@ -152,11 +154,16 @@ func readPacket(buf *bufio.Reader) (*Packet, error) {
 		return nil, err
 	}
 	packet.RecHdr = *hdr
-	data, err := readRawData(packet.RecHdr.InclLen, buf)
+	// data, err := readRawData(packet.RecHdr.InclLen, buf)
+	data, err := ReadEthernetPacket(buf)
 	if err != nil {
 		return nil, err
 	}
-	packet.RecData = data
+	packet.RecData = append(packet.RecData, data)
+
+	arp := ReadArp(int(packet.RecHdr.InclLen)-14, buf)
+
+	packet.RecData = append(packet.RecData, &arp)
 	return &packet, err
 }
 
