@@ -2,9 +2,12 @@ package pcap
 
 import (
 	"bufio"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/atpons/39ac/pcaptool/pkg/util"
 )
 
 type Arp struct {
@@ -43,7 +46,19 @@ func (arp *Arp) Print() {
 	fmt.Printf("Plen=%#x\n", arp.Plen)
 	fmt.Printf("Op=%#x\n", arp.Op)
 	fmt.Printf("SenderMac=%#x\n", arp.SenderMac)
+	senderMac, err := util.LookupMacAddress(hex.EncodeToString(arp.SenderMac))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot Parse SenderMac: %s\n", hex.EncodeToString(arp.SenderMac))
+	} else {
+		fmt.Printf("SenderMac Company: %s\n", senderMac.Company())
+	}
 	fmt.Printf("SenderIp=%#x\n", arp.SenderIP)
 	fmt.Printf("TargetMac=%#x\n", arp.TargetMac)
+	targetMac, err := util.LookupMacAddress(hex.EncodeToString(arp.TargetMac))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Cannot Parse TargetMac")
+	} else {
+		fmt.Printf("TargetMacCompany: %s\n", targetMac.Company())
+	}
 	fmt.Printf("TargetIP=%#x\n", arp.TargetIP)
 }
