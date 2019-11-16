@@ -16,7 +16,7 @@ func (i IP) Print() {
 	fmt.Fprintln(os.Stdout, info)
 }
 
-func ReadIP(len int, buf *bufio.Reader) IP {
+func ReadIP(len int, buf *bufio.Reader) (IP, []byte) {
 	fmt.Fprintf(os.Stderr, "Remain Data: %d\n", len)
 	data := make([]byte, len)
 	io.ReadFull(buf, data)
@@ -25,5 +25,5 @@ func ReadIP(len int, buf *bufio.Reader) IP {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%#v", err)
 	}
-	return IP(ip)
+	return IP(ip), data[ip.Len:]
 }

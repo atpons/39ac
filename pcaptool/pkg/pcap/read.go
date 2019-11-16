@@ -177,8 +177,12 @@ func readPacket(buf *bufio.Reader) (*Packet, error) {
 		packet.RecData = append(packet.RecData, &arp)
 	case TypeIP:
 		fmt.Fprintf(os.Stderr, "Detected as IP\n")
-		ip := ReadIP(int(packet.RecHdr.InclLen)-14, buf)
+		ip, remainData := ReadIP(int(packet.RecHdr.InclLen)-14, buf)
 		packet.RecData = append(packet.RecData, &ip)
+		if ip.Protocol == ProtocolICMP {
+			icmp := ReadICMP(int(packet.RecHdr.InclLen)-14-ip.Len, remainData)
+			packet.RecData = append(packet.RecData, &icmp)
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "malformed packet")
 		return nil, fmt.Errorf("cannot parse packet")
