@@ -161,9 +161,29 @@ func readPacket(buf *bufio.Reader) (*Packet, error) {
 	}
 	packet.RecData = append(packet.RecData, data)
 
-	arp := ReadArp(int(packet.RecHdr.InclLen)-14, buf)
+	ethData, ok := data.(*Ethernet)
+	if !ok {
+		panic("this packet is malformed by no ethernet")
+	}
 
-	packet.RecData = append(packet.RecData, &arp)
+	ethType := binary.BigEndian.Uint16(ethData.Type)
+
+	fmt.Fprintf(os.Stderr, "ethType: %d\n", ethData.Type)
+
+	switch ethType {
+	case TypeARP:
+		fmt.Fprintf(os.Stderr, "Detected as ARP\n")
+		arp := ReadArp(int(packet.RecHdr.InclLen)-14, buf)
+		packet.RecData = append(packet.RecData, &arp)
+	case TypeIP:
+		fmt.Fprintf(os.Stderr, "Detected as IP\n")
+		ip := ReadIP(int(packet.RecHdr.InclLen)-14, buf)
+		packet.RecData = append(packet.RecData, &ip)
+	default:
+		fmt.Fprintf(os.Stderr, "malformed packet")
+		return nil, fmt.Errorf("cannot parse packet")
+	}
+
 	return &packet, err
 }
 
