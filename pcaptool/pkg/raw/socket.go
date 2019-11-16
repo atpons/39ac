@@ -6,6 +6,8 @@ import (
 	"os"
 	"syscall"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/atpons/39ac/pcaptool/pkg/pcap"
 )
 
@@ -23,13 +25,16 @@ func Start() error {
 	defer syscall.Close(fd)
 
 	nic, _ := net.InterfaceByName(os.Args[1])
-	addr := syscall.SockaddrLinklayer{Protocol: htons(syscall.ETH_P_ALL), Ifindex: nic.Index}
+	//addr := syscall.SockaddrLinklayer{Protocol: htons(syscall.ETH_P_ALL), Ifindex: nic.Index}
+	//
+	//if err := syscall.Bind(fd, &addr); err != nil {
+	//	return err
+	//}
 
-	if err := syscall.Bind(fd, &addr); err != nil {
-		return err
-	}
-
-	if err := syscall.SetLsfPromisc(nic.Name, true); err != nil {
+	if err := unix.SetsockoptPacketMreq(fd, syscall.SOL_PACKET, syscall.PACKET_ADD_MEMBERSHIP, &unix.PacketMreq{
+		Ifindex: int32(nic.Index),
+		Type:    syscall.PACKET_MR_PROMISC,
+	}); err != nil {
 		return err
 	}
 

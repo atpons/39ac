@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
+
+	"github.com/atpons/39ac/pcaptool/pkg/bpf"
 )
 
 type L2 interface {
@@ -24,6 +27,12 @@ func ReadEthernetPacket(buf *bufio.Reader) (RecData, error) {
 	raw := Ethernet{}
 	by := make([]byte, 14)
 	_, _ = io.ReadFull(buf, by)
+	out, err := bpf.Filter(by)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[*] Corrupted BPF Filter\n")
+	} else {
+		fmt.Fprintf(os.Stderr, "[*] Filter by %d bytes\n", out)
+	}
 	// _, err := buf.Read(by)
 	//if err != nil {
 	//	panic(err)
