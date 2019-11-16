@@ -2,6 +2,7 @@ package pcap
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"os"
@@ -92,7 +93,7 @@ func Read(name string) Data {
 	buf := bufio.NewReader(file)
 	p.Hdr = readHead(buf)
 	for {
-		packet, err := readPacket(buf)
+		packet, err := readPcapPacket(buf)
 		if err != nil {
 			break
 		}
@@ -147,17 +148,11 @@ func (r *RawData) Print() {
 	fmt.Printf("RawData = %#x\n", r)
 }
 
-func readPacket(buf *bufio.Reader) (*Packet, error) {
-	packet := Packet{}
-	hdr, err := readRecHdr(buf)
-	if err != nil {
-		return nil, err
-	}
-	packet.RecHdr = *hdr
+func readPacket(packet *Packet, buf *bufio.Reader) error {
 	// data, err := readRawData(packet.RecHdr.InclLen, buf)
 	data, err := ReadEthernetPacket(buf)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	packet.RecData = append(packet.RecData, data)
 
@@ -185,9 +180,28 @@ func readPacket(buf *bufio.Reader) (*Packet, error) {
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "malformed packet")
-		return nil, fmt.Errorf("cannot parse packet")
+		return fmt.Errorf("cannot parse packet")
 	}
 
+	return err
+}
+
+func readPcapPacket(buf *bufio.Reader) (*Packet, error) {
+	packet := Packet{}
+	hdr, err := readRecHdr(buf)
+	if err != nil {
+		return nil, err
+	}
+	packet.RecHdr = *hdr
+	err = readPacket(&packet, buf)
+	return &packet, err
+}
+
+func ReadRawPacket(data []byte) (*Packet, error) {
+	packet := Packet{}
+	packet.RecHdr.InclLen = uint32(len(data))
+	buf := bufio.NewReader(bytes.NewReader(data))
+	err := readPacket(&packet, buf)
 	return &packet, err
 }
 
