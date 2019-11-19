@@ -1,7 +1,8 @@
 package bpf
 
 import (
-	"fmt"
+	"bufio"
+	"sync"
 
 	"golang.org/x/net/bpf"
 )
@@ -13,8 +14,42 @@ const (
 	etARP = 0x0806
 )
 
-func Filter(frame []byte) (int, error) {
-	vm, err := bpf.NewVM([]bpf.Instruction{
+type Reader interface {
+	Read([]byte) (int, error)
+}
+
+type FilterReader struct {
+	mu     sync.Mutex
+	buf    []byte
+	vm     *bpf.VM
+	reader bufio.Reader
+}
+
+func NewFilterReader(reader bufio.Reader, vm bpf.VM) *FilterReader {
+	return &FilterReader{reader: reader, vm: &vm}
+}
+
+func (f *FilterReader) Read(p []byte) (int, error) {
+	f.mu.Lock()
+	n, err := f.reader.Read(p)
+	f.buf = p
+	f.mu.Unlock()
+	return n, err
+}
+
+func (f *FilterReader) Filter() (int, error) {
+	out, err := f.vm.Run(f.buf)
+	if err != nil {
+		return out, err
+	}
+	if out > len(f.buf) {
+		out = len(f.buf)
+	}
+	return out, err
+}
+
+func ArpVm() *bpf.VM {
+	vm, _ := bpf.NewVM([]bpf.Instruction{
 		// Load EtherType value from Ethernet header
 		bpf.LoadAbsolute{
 			Off:  etOff,
@@ -37,21 +72,5 @@ func Filter(frame []byte) (int, error) {
 			Val: 1500,
 		},
 	})
-	if err != nil {
-		return 0, fmt.Errorf("failed to load BPF program: %v", err)
-	}
-
-	// Run our VM's BPF program using the Ethernet frame as input
-	out, err := vm.Run(frame)
-	if err != nil {
-		return 0, fmt.Errorf("failed to accept Ethernet frame: %v", err)
-	}
-
-	// BPF VM can return a byte count greater than the number of input
-	// bytes, so trim the output to match the input byte length
-	if out > len(frame) {
-		out = len(frame)
-	}
-
-	return out, nil
+	return vm
 }

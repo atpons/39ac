@@ -24,10 +24,12 @@ func (eth *Ethernet) Print() {
 }
 
 func ReadEthernetPacket(buf *bufio.Reader) (RecData, error) {
+	filterReader := bpf.NewFilterReader(*buf, *bpf.ArpVm())
+
 	raw := Ethernet{}
 	by := make([]byte, 14)
-	_, _ = io.ReadFull(buf, by)
-	out, err := bpf.Filter(by)
+	_, _ = io.ReadFull(filterReader, by)
+	out, err := filterReader.Filter()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[*] Corrupted BPF Filter\n")
 	} else {

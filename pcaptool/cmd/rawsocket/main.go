@@ -16,6 +16,7 @@ func main() {
 	flag.Parse()
 
 	sock, err := raw.NewSocket()
+	defer sock.Close()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
