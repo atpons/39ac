@@ -24,7 +24,7 @@ func (eth *Ethernet) Print() {
 }
 
 func ReadEthernetPacket(buf *bufio.Reader) (RecData, error) {
-	filterReader := bpf.NewFilterReader(*buf, *bpf.ArpVm())
+	filterReader := bpf.NewFilterReader(buf, *bpf.ArpVm())
 
 	raw := Ethernet{}
 	by := make([]byte, 14)

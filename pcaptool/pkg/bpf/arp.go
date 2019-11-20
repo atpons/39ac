@@ -22,17 +22,18 @@ type FilterReader struct {
 	mu     sync.Mutex
 	buf    []byte
 	vm     *bpf.VM
-	reader bufio.Reader
+	reader *bufio.Reader
 }
 
-func NewFilterReader(reader bufio.Reader, vm bpf.VM) *FilterReader {
+func NewFilterReader(reader *bufio.Reader, vm bpf.VM) *FilterReader {
 	return &FilterReader{reader: reader, vm: &vm}
 }
 
 func (f *FilterReader) Read(p []byte) (int, error) {
-	f.mu.Lock()
 	n, err := f.reader.Read(p)
-	f.buf = p
+	f.mu.Lock()
+	f.buf = make([]byte, len(p))
+	copy(f.buf, p)
 	f.mu.Unlock()
 	return n, err
 }
