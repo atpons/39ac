@@ -16,28 +16,71 @@ const (
 )
 
 type Socket struct {
-	fd int
+	dev       string
+	bridgeDev string
+	fd        int
+	bridgeFd  int
 }
 
-func NewSocket() (*Socket, error) {
+func NewSocket(dev string, opts ...func(*Socket) error) (*Socket, error) {
+	s := &Socket{dev: dev}
+
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, int(htons(syscall.ETH_P_ALL)))
 	if err != nil {
 		return nil, err
 	}
-	return &Socket{fd: fd}, nil
+
+	s.fd = fd
+
+	for _, opt := range opts {
+		if err := opt(s); err != nil {
+			return nil, err
+		}
+	}
+
+	return s, nil
 }
 
-func (s *Socket) Start(dev string) error {
-	err := setPromisc(s.fd, dev)
+func OptionBridge(brdev string) func(*Socket) error {
+	return func(s *Socket) error {
+		fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, int(htons(syscall.ETH_P_ALL)))
+		if err != nil {
+			return err
+		}
+		iface, err := net.InterfaceByName(brdev)
+		if err != nil {
+			return err
+		}
+		var haddr [8]byte
+		copy(haddr[0:7], iface.HardwareAddr[0:7])
+		addr := syscall.SockaddrLinklayer{
+			Protocol: syscall.ETH_P_IP,
+			Ifindex:  iface.Index,
+			Halen:    uint8(len(iface.HardwareAddr)),
+			Addr:     haddr,
+		}
+		s.bridgeFd = fd
+		s.bridgeDev = brdev
+		if err := syscall.Bind(fd, &addr); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stdout, "Complete bind\n")
+		return nil
+	}
+}
+
+func (s *Socket) Start() error {
+	err := setPromisc(s.fd, s.dev)
 	if err != nil {
 		return err
 	}
 
 	file := getFile(s.fd)
-	return ScanSocket(file)
+	return s.ScanSocket(file)
 }
 
 func setPromisc(fd int, dev string) error {
+	fmt.Fprintf(os.Stderr, "Getting Device dev=%s\n", dev)
 	iface, err := net.InterfaceByName(dev)
 	if err != nil {
 		return err
@@ -57,7 +100,7 @@ func getFile(fd int) *os.File {
 	return os.NewFile(uintptr(fd), "")
 }
 
-func ScanSocket(f *os.File) error {
+func (s *Socket) ScanSocket(f *os.File) error {
 	for {
 		buf := make([]byte, byteSize)
 		num, err := f.Read(buf)
@@ -66,6 +109,11 @@ func ScanSocket(f *os.File) error {
 			break
 		} else {
 			data := buf[:num]
+			if s.bridgeFd != 0 {
+				if _, err := syscall.Write(s.bridgeFd, data); err != nil {
+					fmt.Fprintf(os.Stderr, "[-] Bridge Error: %v\n", err)
+				}
+			}
 			packet, err := pcap.ReadRawPacket(data)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
