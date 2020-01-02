@@ -20,7 +20,16 @@ type Ethernet struct {
 }
 
 func (eth *Ethernet) Print() {
-	fmt.Printf("Dst=%#x, Src=%#x, Type=%#x\n", eth.Dst, eth.Src, eth.Type)
+	// FIXME: got stuck with print :(
+	//srcMac, err := util.LookupMacAddress(hex.EncodeToString(eth.Src))
+	//if err != nil {
+	//	log.Printf("look up macerr: %v", err)
+	//}
+	//dstMac, err := util.LookupMacAddress(hex.EncodeToString(eth.Dst))
+	//if err != nil {
+	//	log.Printf("lookup mac err: %v", err)
+	//}
+	//fmt.Printf("Dst=%#x (%s), Src=%#x (%s), Type=%#x\n", eth.Dst, dstMac.Company(), eth.Src, srcMac.Company(), eth.Type)
 }
 
 func ReadEthernetPacket(buf *bufio.Reader) (RecData, error) {

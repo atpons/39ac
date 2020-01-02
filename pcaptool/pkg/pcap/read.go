@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/atpons/39ac/pcaptool/pkg/store"
 	"github.com/atpons/39ac/pcaptool/pkg/util"
 )
 
@@ -170,6 +171,10 @@ func readPacket(packet *Packet, buf *bufio.Reader) error {
 		fmt.Fprintf(os.Stderr, "Detected as ARP\n")
 		arp := ReadArp(int(packet.RecHdr.InclLen)-14, buf)
 		packet.RecData = append(packet.RecData, &arp)
+		go func() {
+			fmt.Printf("storing arp ip=%v, mac=%v\n", arp.SenderIP, arp.SenderMac)
+			store.Global.SetARP(arp.SenderIP, arp.SenderMac)
+		}()
 	case TypeIP:
 		fmt.Fprintf(os.Stderr, "Detected as IP\n")
 		ip, remainData := ReadIP(int(packet.RecHdr.InclLen)-14, buf)
