@@ -18,8 +18,9 @@ const (
 type Socket struct {
 	dev       string
 	bridgeDev string
-	fd        int
-	bridgeFd  int
+
+	fd       int
+	bridgeFd int
 }
 
 func NewSocket(dev string, opts ...func(*Socket) error) (*Socket, error) {

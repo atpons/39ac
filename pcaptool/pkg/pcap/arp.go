@@ -22,6 +22,20 @@ type Arp struct {
 	TargetIP  []byte
 }
 
+func (a *Arp) Marshal() []byte {
+	b := make([]byte, 16)
+	copy(b[0:2], a.Htype)
+	copy(b[2:4], a.Ptype)
+	copy(b[4:5], a.Hlen)
+	copy(b[5:6], a.Plen)
+	copy(b[6:8], a.Op)
+	copy(b[8:14], a.SenderMac)
+	copy(b[14:18], a.SenderIP)
+	copy(b[18:23], a.TargetMac)
+	copy(b[23:28], a.TargetIP)
+	return b
+}
+
 func ReadArp(len int, buf *bufio.Reader) Arp {
 	fmt.Fprintf(os.Stderr, "Remain Byte: %d\n", len)
 	data := make([]byte, len)
