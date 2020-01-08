@@ -18,16 +18,20 @@ func init() {
 }
 
 type Store struct {
-	mu sync.Mutex
+	mu sync.RWMutex
 
 	ARP map[string]string
 }
 
 func (s *Store) SetARP(ip, mac []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.ARP[string(ip)] = string(mac)
 }
 
 func (s *Store) GetARP(ip []byte) ([]byte, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	v, ok := s.ARP[string(ip)]
 	if !ok {
 		return []byte{}, ErrARPNotFound
