@@ -23,6 +23,11 @@ func (p *PacketList) Print() {
 	}
 }
 
+var (
+	Routing        = false
+	DefaultGateway = []byte{192, 168, 90, 1}
+)
+
 type Data struct {
 	Hdr  Hdr
 	Data PacketList

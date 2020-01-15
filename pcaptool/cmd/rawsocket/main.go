@@ -14,13 +14,15 @@ var (
 	bridgeDev = flag.String("brdev", "", "bridge network interface")
 )
 
+var nextHop = []byte{192, 168, 90, 254}
+
 func main() {
 	flag.Parse()
 
 	log.Printf("dev=%s, bridgeDev=%s", *dev, *bridgeDev)
 
-	//sock, err := raw.NewSocket(*dev, raw.OptionBridge(*bridgeDev))
-	sock, err := raw.NewSocket(*dev)
+	sock, err := raw.NewSocket(*dev, raw.OptionBridge(*bridgeDev), raw.OptionNextHop(nextHop))
+	//sock, err := raw.NewSocket(*dev)
 	defer sock.Close()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())

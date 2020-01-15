@@ -2,6 +2,7 @@ package raw
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"syscall"
@@ -18,6 +19,7 @@ const (
 type Socket struct {
 	dev       string
 	bridgeDev string
+	NextHop   []byte
 
 	fd       int
 	bridgeFd int
@@ -40,6 +42,13 @@ func NewSocket(dev string, opts ...func(*Socket) error) (*Socket, error) {
 	}
 
 	return s, nil
+}
+
+func OptionNextHop(nextHop []byte) func(*Socket) error {
+	return func(s *Socket) error {
+		s.NextHop = nextHop
+		return nil
+	}
 }
 
 func OptionBridge(brdev string) func(*Socket) error {
@@ -121,6 +130,19 @@ func (s *Socket) ScanSocket(f *os.File) error {
 			} else {
 				for _, d := range packet.RecData {
 					d.Print()
+					if v, ok := d.(*pcap.Ethernet); ok {
+						log.Printf("routing packet to %v", v.Dst)
+						// TODO: change next hop ip address
+						var dstAddr [8]byte
+						copy(dstAddr[0:7], v.Dst[0:7])
+						addr := syscall.SockaddrLinklayer{
+							Protocol: syscall.ETH_P_IP,
+							Addr:     dstAddr,
+						}
+						if err := syscall.Sendto(s.bridgeFd, nil, 0, &addr); err != nil {
+							log.Println(err)
+						}
+					}
 				}
 			}
 			fmt.Fprintf(os.Stderr, "Recv %d bytes\n", len(data))
