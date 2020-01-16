@@ -39,6 +39,7 @@ type Field interface {
 
 type RecData interface {
 	Print()
+	Bytes() []byte
 }
 
 func (d *Data) Print() {
@@ -150,8 +151,20 @@ type RawData struct {
 	Data []byte
 }
 
+func (r *RawData) Bytes() []byte {
+	return r.Data
+}
+
 func (r *RawData) Print() {
 	fmt.Printf("RawData = %#x\n", r)
+}
+
+func RecDataToBytes(recData []RecData) []byte {
+	var b []byte
+	for _, r := range recData {
+		b = append(b, r.Bytes()...)
+	}
+	return b
 }
 
 func readPacket(packet *Packet, buf *bufio.Reader) error {

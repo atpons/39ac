@@ -32,6 +32,14 @@ func (eth *Ethernet) Print() {
 	//fmt.Printf("Dst=%#x (%s), Src=%#x (%s), Type=%#x\n", eth.Dst, dstMac.Company(), eth.Src, srcMac.Company(), eth.Type)
 }
 
+func (eth *Ethernet) Bytes() []byte {
+	var b []byte
+	b = append(b, eth.Dst...)
+	b = append(b, eth.Src...)
+	b = append(b, eth.Type...)
+	return b
+}
+
 func ReadEthernetPacket(buf *bufio.Reader) (RecData, error) {
 	filterReader := bpf.NewFilterReader(buf, *bpf.ArpVm())
 
@@ -51,5 +59,6 @@ func ReadEthernetPacket(buf *bufio.Reader) (RecData, error) {
 	raw.Dst = by[0:6]
 	raw.Src = by[6:12]
 	raw.Type = by[12:14]
+	fmt.Printf("Ethernet Type=%#x\n", raw.Type)
 	return &raw, nil
 }

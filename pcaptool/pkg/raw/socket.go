@@ -19,7 +19,7 @@ const (
 type Socket struct {
 	dev       string
 	bridgeDev string
-	NextHop   []byte
+	NextHop   [8]byte
 
 	fd       int
 	bridgeFd int
@@ -44,7 +44,7 @@ func NewSocket(dev string, opts ...func(*Socket) error) (*Socket, error) {
 	return s, nil
 }
 
-func OptionNextHop(nextHop []byte) func(*Socket) error {
+func OptionNextHop(nextHop [8]byte) func(*Socket) error {
 	return func(s *Socket) error {
 		s.NextHop = nextHop
 		return nil
@@ -118,31 +118,42 @@ func (s *Socket) ScanSocket(f *os.File) error {
 		if err != nil {
 			break
 		} else {
+			var addr syscall.SockaddrLinklayer
 			data := buf[:num]
-			if s.bridgeFd != 0 {
-				if _, err := syscall.Write(s.bridgeFd, data); err != nil {
-					fmt.Fprintf(os.Stderr, "[-] Bridge Error: %v\n", err)
-				}
-			}
+			//if s.bridgeFd != 0 {
+			//	if _, err := syscall.Write(s.bridgeFd, data); err != nil {
+			//		fmt.Fprintf(os.Stderr, "[-] Bridge Error: %v\n", err)
+			//	}
+			//}
 			packet, err := pcap.ReadRawPacket(data)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			} else {
+				var newData []byte
 				for _, d := range packet.RecData {
 					d.Print()
-					if v, ok := d.(*pcap.Ethernet); ok {
-						log.Printf("routing packet to %v", v.Dst)
-						// TODO: change next hop ip address
-						var dstAddr [8]byte
-						copy(dstAddr[0:7], v.Dst[0:7])
-						addr := syscall.SockaddrLinklayer{
-							Protocol: syscall.ETH_P_IP,
-							Addr:     dstAddr,
+					if s.bridgeFd != 0 {
+						if v, ok := d.(*pcap.Ethernet); ok {
+							log.Printf("routing packet to %v", v)
+							// TODO: change next hop ip address
+							copy(v.Dst[0:6], s.NextHop[0:6])
+							iface, _ := net.InterfaceByName(s.bridgeDev)
+							copy(v.Src[0:6], iface.HardwareAddr[0:6])
+							addr = syscall.SockaddrLinklayer{
+								Protocol: syscall.ETH_P_IP,
+								Halen:    6,
+								Ifindex:  iface.Index,
+								Addr:     s.NextHop,
+							}
 						}
-						if err := syscall.Sendto(s.bridgeFd, nil, 0, &addr); err != nil {
-							log.Println(err)
+						if v, ok := d.(*pcap.IP); ok {
+							v.TTL -= 1
 						}
 					}
+					newData = append(newData, d.Bytes()...)
+				}
+				if err := syscall.Sendto(s.bridgeFd, newData, 0, &addr); err != nil {
+					log.Println(err)
 				}
 			}
 			fmt.Fprintf(os.Stderr, "Recv %d bytes\n", len(data))

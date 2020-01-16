@@ -23,7 +23,7 @@ type Arp struct {
 }
 
 func (a *Arp) Marshal() []byte {
-	b := make([]byte, 16)
+	b := make([]byte, 28)
 	copy(b[0:2], a.Htype)
 	copy(b[2:4], a.Ptype)
 	copy(b[4:5], a.Hlen)
@@ -75,4 +75,8 @@ func (arp *Arp) Print() {
 		fmt.Printf("TargetMacCompany: %s\n", targetMac.Company())
 	}
 	fmt.Printf("TargetIP=%#x\n", arp.TargetIP)
+}
+
+func (arp *Arp) Bytes() []byte {
+	return arp.Marshal()
 }

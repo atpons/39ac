@@ -14,10 +14,14 @@ var (
 	bridgeDev = flag.String("brdev", "", "bridge network interface")
 )
 
-var nextHop = []byte{192, 168, 90, 254}
+var (
+	nextHop = [8]byte{0x00, 0x0c, 0x29, 0x00, 0x00, 0x9d, 0x40, 0x26}
+)
 
 func main() {
 	flag.Parse()
+
+	copy(nextHop[0:7], nextHop[0:7])
 
 	log.Printf("dev=%s, bridgeDev=%s", *dev, *bridgeDev)
 

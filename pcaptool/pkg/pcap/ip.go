@@ -16,6 +16,12 @@ func (i IP) Print() {
 	fmt.Fprintln(os.Stdout, info)
 }
 
+func (i IP) Bytes() []byte {
+	ip := ipv4.Header(i)
+	b, _ := ip.Marshal()
+	return b
+}
+
 func ReadIP(len int, buf *bufio.Reader) (IP, []byte) {
 	fmt.Fprintf(os.Stderr, "Remain Data: %d\n", len)
 	data := make([]byte, len)
