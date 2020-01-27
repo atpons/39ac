@@ -150,6 +150,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 					if s.bridgeFd != 0 {
 						if v, ok := d.(*pcap.Ethernet); ok {
 							if len(dstMac) < 7 {
+								log.Println("dstMac error")
 								goto Loop
 							}
 							iface, _ := net.InterfaceByName(s.bridgeDev)
