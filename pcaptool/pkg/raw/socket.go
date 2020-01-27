@@ -11,7 +11,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/atpons/39ac/pcaptool/pkg/pcap"
-	"github.com/atpons/39ac/pcaptool/pkg/store"
 )
 
 const (
@@ -138,11 +137,11 @@ func (s *Socket) ScanSocket(f *os.File) error {
 					d.Print()
 					if s.bridgeFd != 0 {
 						if v, ok := d.(*pcap.IP); ok {
-							dstMac, err = store.Global.GetARP(v.Dst)
-							if err != nil {
-								log.Println(err)
-								goto Loop
-							}
+							//dstMac, err = store.Global.GetARP(v.Dst)
+							//if err != nil {
+							//	log.Println(err)
+							//	goto Loop
+							//}
 							v.TTL -= 1
 						}
 					}
