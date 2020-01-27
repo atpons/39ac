@@ -1,6 +1,7 @@
 package raw
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/atpons/39ac/pcaptool/pkg/pcap"
+	"github.com/atpons/39ac/pcaptool/pkg/store"
 )
 
 const (
@@ -112,6 +114,7 @@ func getFile(fd int) *os.File {
 
 func (s *Socket) ScanSocket(f *os.File) error {
 	for {
+	Loop:
 		buf := make([]byte, byteSize)
 		num, err := f.Read(buf)
 		fmt.Println("Read ok")
@@ -130,30 +133,50 @@ func (s *Socket) ScanSocket(f *os.File) error {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			} else {
 				var newData []byte
+				var dstMac []byte
 				for _, d := range packet.RecData {
 					d.Print()
 					if s.bridgeFd != 0 {
+						if v, ok := d.(*pcap.IP); ok {
+							dstMac, err = store.Global.GetARP(v.Dst)
+							if err != nil {
+								log.Println(err)
+								goto Loop
+							}
+							v.TTL -= 1
+						}
+					}
+				}
+				for _, d := range packet.RecData {
+					if s.bridgeFd != 0 {
 						if v, ok := d.(*pcap.Ethernet); ok {
-							log.Printf("routing packet to %v", v)
-							// TODO: change next hop ip address
-							copy(v.Dst[0:6], s.NextHop[0:6])
+							if len(dstMac) < 7 {
+								goto Loop
+							}
 							iface, _ := net.InterfaceByName(s.bridgeDev)
+							if !bytes.Equal(iface.HardwareAddr, v.Dst) {
+								log.Printf("[-] Not Match MAC: HWAddr: %#v, DstMac: %#v", iface.HardwareAddr, v.Dst)
+								goto Loop
+							}
+							copy(v.Dst[0:6], dstMac[0:6])
+							var dstMacByte [8]byte
+							copy(dstMacByte[0:6], dstMac[0:6])
+							log.Printf("routing packet to %v", v)
 							copy(v.Src[0:6], iface.HardwareAddr[0:6])
 							addr = syscall.SockaddrLinklayer{
 								Protocol: syscall.ETH_P_IP,
 								Halen:    6,
 								Ifindex:  iface.Index,
-								Addr:     s.NextHop,
+								Addr:     dstMacByte,
 							}
-						}
-						if v, ok := d.(*pcap.IP); ok {
-							v.TTL -= 1
 						}
 					}
 					newData = append(newData, d.Bytes()...)
 				}
 				if err := syscall.Sendto(s.bridgeFd, newData, 0, &addr); err != nil {
 					log.Println(err)
+				} else {
+					log.Printf("[*] Send OK")
 				}
 			}
 			fmt.Fprintf(os.Stderr, "Recv %d bytes\n", len(data))
