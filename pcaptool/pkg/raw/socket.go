@@ -143,6 +143,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 							//	goto Loop
 							//}
 							v.TTL -= 1
+
 						}
 					}
 				}
