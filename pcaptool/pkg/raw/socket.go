@@ -159,7 +159,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 						if v, ok := d.(*pcap.IP); ok {
 							dstMac, err = store.Global.GetARP(v.Dst)
 							if err != nil {
-								log.Printf("dstMac not dound: %v", err)
+								log.Printf("dstMac not dound: err=%v reqDst=%s", err, v.Dst)
 								goto Loop
 							}
 							v.TTL -= 1
