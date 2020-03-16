@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"reflect"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -183,6 +184,11 @@ func (s *Socket) ScanSocket(f *os.File) error {
 							var dstMacByte [8]byte
 							copy(dstMacByte[0:6], dstMac[0:6])
 							log.Printf("routing packet to %v", v)
+							if reflect.DeepEqual(v.Src[0:6], v.Dst[0:6]) {
+								log.Printf("reject by match dst and src")
+							} else {
+								log.Printf("routing packet to %v", v)
+							}
 							copy(v.Src[0:6], iface.HardwareAddr[0:6])
 							addr = syscall.SockaddrLinklayer{
 								Protocol: syscall.ETH_P_IP,
