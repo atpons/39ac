@@ -157,9 +157,9 @@ func (s *Socket) ScanSocket(f *os.File) error {
 					d.Print()
 					if s.BridgeFd != 0 {
 						if v, ok := d.(*pcap.IP); ok {
-							dstMac, err = store.Global.GetARP(v.Dst)
+							dstMac, err = store.Global.GetARP(v.Dst.To4())
 							if err != nil {
-								log.Printf("dstMac not dound: err=%v reqDst=%s", err, v.Dst)
+								log.Printf("dstMac not dound: err=%v reqDst=%v", err, v.Dst.To4())
 								goto Loop
 							}
 							v.TTL -= 1
