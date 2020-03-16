@@ -185,7 +185,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 							log.Printf("routing packet to %v", v)
 							if reflect.DeepEqual(v.Src[0:6], v.Dst[0:6]) {
 								log.Printf("reject by match dst and src")
-								goto Loop
+								//goto Loop
 							} else {
 								log.Printf("routing packet to %v", v)
 							}
