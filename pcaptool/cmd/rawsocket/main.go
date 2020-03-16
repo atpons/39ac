@@ -33,7 +33,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := sock.Start(); err != nil {
+	go sock.Start(sock.BridgeFd, sock.BridgeDev, sock.ScanSniff)
+
+	if err := sock.Start(sock.Fd, sock.Dev, sock.ScanSocket); err != nil {
 		panic(err)
 	}
 }

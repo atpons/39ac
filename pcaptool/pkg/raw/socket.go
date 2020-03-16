@@ -19,23 +19,23 @@ const (
 )
 
 type Socket struct {
-	dev       string
-	bridgeDev string
+	Dev       string
+	BridgeDev string
 	NextHop   [8]byte
 
-	fd       int
-	bridgeFd int
+	Fd       int
+	BridgeFd int
 }
 
 func NewSocket(dev string, opts ...func(*Socket) error) (*Socket, error) {
-	s := &Socket{dev: dev}
+	s := &Socket{Dev: dev}
 
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, int(htons(syscall.ETH_P_ALL)))
 	if err != nil {
 		return nil, err
 	}
 
-	s.fd = fd
+	s.Fd = fd
 
 	for _, opt := range opts {
 		if err := opt(s); err != nil {
@@ -71,8 +71,8 @@ func OptionBridge(brdev string) func(*Socket) error {
 			Halen:    uint8(len(iface.HardwareAddr)),
 			Addr:     haddr,
 		}
-		s.bridgeFd = fd
-		s.bridgeDev = brdev
+		s.BridgeFd = fd
+		s.BridgeDev = brdev
 		if err := syscall.Bind(fd, &addr); err != nil {
 			return err
 		}
@@ -81,18 +81,18 @@ func OptionBridge(brdev string) func(*Socket) error {
 	}
 }
 
-func (s *Socket) Start() error {
-	err := setPromisc(s.fd, s.dev)
+func (s *Socket) Start(fd int, dev string, scanFunc func(f *os.File) error) error {
+	err := setPromisc(fd, dev)
 	if err != nil {
 		return err
 	}
 
-	file := getFile(s.fd)
-	return s.ScanSocket(file)
+	file := getFile(fd)
+	return scanFunc(file)
 }
 
 func setPromisc(fd int, dev string) error {
-	fmt.Fprintf(os.Stderr, "Getting Device dev=%s\n", dev)
+	fmt.Fprintf(os.Stderr, "Getting Device Dev=%s\n", dev)
 	iface, err := net.InterfaceByName(dev)
 	if err != nil {
 		return err
@@ -112,6 +112,25 @@ func getFile(fd int) *os.File {
 	return os.NewFile(uintptr(fd), "")
 }
 
+func (s *Socket) ScanSniff(f *os.File) error {
+	for {
+	Loop:
+		buf := make([]byte, byteSize)
+		num, err := f.Read(buf)
+		if err != nil {
+			break
+		} else {
+			data := buf[:num]
+			_, err := pcap.ReadRawPacket(data)
+			if err != nil {
+				log.Println(err)
+				goto Loop
+			}
+		}
+	}
+	return nil
+}
+
 func (s *Socket) ScanSocket(f *os.File) error {
 	for {
 	Loop:
@@ -123,8 +142,8 @@ func (s *Socket) ScanSocket(f *os.File) error {
 		} else {
 			var addr syscall.SockaddrLinklayer
 			data := buf[:num]
-			//if s.bridgeFd != 0 {
-			//	if _, err := syscall.Write(s.bridgeFd, data); err != nil {
+			//if s.BridgeFd != 0 {
+			//	if _, err := syscall.Write(s.BridgeFd, data); err != nil {
 			//		fmt.Fprintf(os.Stderr, "[-] Bridge Error: %v\n", err)
 			//	}
 			//}
@@ -136,7 +155,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 				var dstMac []byte
 				for _, d := range packet.RecData {
 					d.Print()
-					if s.bridgeFd != 0 {
+					if s.BridgeFd != 0 {
 						if v, ok := d.(*pcap.IP); ok {
 							dstMac, err = store.Global.GetARP(v.Dst)
 							if err != nil {
@@ -149,13 +168,13 @@ func (s *Socket) ScanSocket(f *os.File) error {
 					}
 				}
 				for _, d := range packet.RecData {
-					if s.bridgeFd != 0 {
+					if s.BridgeFd != 0 {
 						if v, ok := d.(*pcap.Ethernet); ok {
 							if len(dstMac) < 7 {
 								log.Println("dstMac error")
 								goto Loop
 							}
-							iface, _ := net.InterfaceByName(s.bridgeDev)
+							iface, _ := net.InterfaceByName(s.BridgeDev)
 							if !bytes.Equal(iface.HardwareAddr, v.Dst) {
 								log.Printf("[-] Not Match MAC: HWAddr: %#v, DstMac: %#v", iface.HardwareAddr, v.Dst)
 								goto Loop
@@ -175,7 +194,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 					}
 					newData = append(newData, d.Bytes()...)
 				}
-				if err := syscall.Sendto(s.bridgeFd, newData, 0, &addr); err != nil {
+				if err := syscall.Sendto(s.BridgeFd, newData, 0, &addr); err != nil {
 					log.Println(err)
 				} else {
 					log.Printf("[*] Send OK")
@@ -188,7 +207,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 }
 
 func (s *Socket) Close() error {
-	return syscall.Close(s.fd)
+	return syscall.Close(s.Fd)
 }
 
 func htons(host uint16) uint16 {
