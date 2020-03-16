@@ -159,7 +159,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 						if v, ok := d.(*pcap.IP); ok {
 							dstMac, err = store.Global.GetARP(v.Dst)
 							if err != nil {
-								log.Println(err)
+								log.Printf("dstMac not dound: %v", err)
 								goto Loop
 							}
 							v.TTL -= 1
@@ -171,7 +171,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 					if s.BridgeFd != 0 {
 						if v, ok := d.(*pcap.Ethernet); ok {
 							if len(dstMac) < 7 {
-								log.Println("dstMac error")
+								log.Printf("dstMac error dstMac=%v", dstMac)
 								goto Loop
 							}
 							iface, _ := net.InterfaceByName(s.BridgeDev)
