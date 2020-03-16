@@ -170,7 +170,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 				for _, d := range packet.RecData {
 					if s.BridgeFd != 0 {
 						if v, ok := d.(*pcap.Ethernet); ok {
-							if len(dstMac) < 7 {
+							if len(dstMac) < 6 {
 								log.Printf("dstMac error dstMac=%v", dstMac)
 								goto Loop
 							}
