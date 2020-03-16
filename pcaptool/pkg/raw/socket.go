@@ -1,7 +1,6 @@
 package raw
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -176,16 +175,17 @@ func (s *Socket) ScanSocket(f *os.File) error {
 								goto Loop
 							}
 							iface, _ := net.InterfaceByName(s.BridgeDev)
-							if !bytes.Equal(iface.HardwareAddr, v.Dst) {
-								log.Printf("[-] Not Match MAC: HWAddr: %#v, DstMac: %#v", iface.HardwareAddr, v.Dst)
-								goto Loop
-							}
+							//if !bytes.Equal(iface.HardwareAddr, v.Dst) {
+							//	log.Printf("[-] Not Match MAC: HWAddr: %#v, DstMac: %#v", iface.HardwareAddr, v.Dst)
+							//	goto Loop
+							//}
 							copy(v.Dst[0:6], dstMac[0:6])
 							var dstMacByte [8]byte
 							copy(dstMacByte[0:6], dstMac[0:6])
 							log.Printf("routing packet to %v", v)
 							if reflect.DeepEqual(v.Src[0:6], v.Dst[0:6]) {
 								log.Printf("reject by match dst and src")
+								goto Loop
 							} else {
 								log.Printf("routing packet to %v", v)
 							}
