@@ -174,7 +174,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 								log.Printf("dstMac error dstMac=%v", dstMac)
 								goto Loop
 							}
-							iface, _ := net.InterfaceByName(s.BridgeDev)
+							iface, _ := net.InterfaceByName(s.Dev)
 							//if !bytes.Equal(iface.HardwareAddr, v.Dst) {
 							//	log.Printf("[-] Not Match MAC: HWAddr: %#v, DstMac: %#v", iface.HardwareAddr, v.Dst)
 							//	goto Loop
@@ -201,8 +201,8 @@ func (s *Socket) ScanSocket(f *os.File) error {
 					}
 					newData = append(newData, d.Bytes()...)
 				}
-				log.Printf("Sendto from %s to %X", s.BridgeDev, addr.Addr)
-				if err := syscall.Sendto(s.BridgeFd, newData, 0, &addr); err != nil {
+				log.Printf("Sendto from %s to %X", s.Dev, addr.Addr)
+				if err := syscall.Sendto(s.Fd, newData, 0, &addr); err != nil {
 					log.Println(err)
 				} else {
 					log.Printf("[*] Send OK")
