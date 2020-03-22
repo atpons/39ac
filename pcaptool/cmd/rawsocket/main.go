@@ -39,7 +39,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	go brSock.Start(sock.Fd, sock.Dev, sock.ScanSocket)
+	go brSock.Start(brSock.Fd, brSock.Dev, sock.ScanSocket)
 
 	if err := sock.Start(sock.Fd, sock.Dev, sock.ScanSocket); err != nil {
 		panic(err)
