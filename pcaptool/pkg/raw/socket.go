@@ -182,7 +182,6 @@ func (s *Socket) ScanSocket(f *os.File) error {
 							copy(v.Dst[0:6], dstMac[0:6])
 							var dstMacByte [8]byte
 							copy(dstMacByte[0:6], dstMac[0:6])
-							log.Printf("routing packet to %v", v)
 							if reflect.DeepEqual(v.Src[0:6], v.Dst[0:6]) {
 								log.Printf("reject by match dst and src")
 								continue
@@ -191,6 +190,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 								log.Printf("routing packet to %v", v)
 							}
 							copy(v.Src[0:6], iface.HardwareAddr[0:6])
+							log.Printf("routing packet to %x -> %x, %v", v.Src, v.Dst, v)
 							addr = syscall.SockaddrLinklayer{
 								Protocol: syscall.ETH_P_IP,
 								Halen:    6,
@@ -201,6 +201,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 					}
 					newData = append(newData, d.Bytes()...)
 				}
+				log.Printf("Sendto from %s to %X", s.BridgeDev, addr.Addr)
 				if err := syscall.Sendto(s.BridgeFd, newData, 0, &addr); err != nil {
 					log.Println(err)
 				} else {
