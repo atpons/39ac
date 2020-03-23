@@ -5,7 +5,8 @@ before:
   hooks:
     - go mod tidy
 builds:
-  - main: ./pcaptool/cmd/rawsocket
+  - main: ./cmd/rawsocket
+    dir: ./pcaptool
     id: "rawsocket"
     binary: rawsocket
     ldflags:
