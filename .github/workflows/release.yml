@@ -18,6 +18,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
+          workdir: ./pcaptool
           version: latest
           args: release --rm-dist
         env:

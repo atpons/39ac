@@ -6,7 +6,6 @@ before:
     - go mod tidy
 builds:
   - main: ./cmd/rawsocket
-    dir: ./pcaptool
     id: "rawsocket"
     binary: rawsocket
     ldflags:
