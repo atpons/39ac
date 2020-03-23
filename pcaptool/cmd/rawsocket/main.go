@@ -33,13 +33,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	//brSock, err := raw.NewSocket(*bridgeDev, raw.OptionBridge(*dev), raw.OptionNextHop(nextHop))
-	//defer brSock.Close()
-	//if err != nil {
-	//	fmt.Fprintf(os.Stderr, err.Error())
-	//	os.Exit(1)
-	//}
-	//go brSock.Start(brSock.Fd, brSock.Dev, sock.ScanSocket)
+	brSock, err := raw.NewSocket(*bridgeDev, raw.OptionBridge(*dev), raw.OptionNextHop(nextHop))
+	defer brSock.Close()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+	go brSock.Start(brSock.Fd, brSock.Dev, sock.ScanSocket)
 
 	if err := sock.Start(sock.Fd, sock.Dev, sock.ScanSocket); err != nil {
 		panic(err)
