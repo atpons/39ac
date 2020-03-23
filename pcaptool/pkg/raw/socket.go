@@ -114,6 +114,8 @@ func (s *Socket) BridgeSocket(bridgeFile *os.File) error {
 		if s.bridgeFd != 0 {
 			if _, err := syscall.Write(s.fd, data); err != nil {
 				fmt.Fprintf(os.Stderr, "[-] Bridge Error: %v\n", err)
+			} else {
+				fmt.Fprintf(os.Stderr, "sendto with device from bridge device\n")
 			}
 		}
 	}
