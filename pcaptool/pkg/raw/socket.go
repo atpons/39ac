@@ -131,7 +131,6 @@ func (s *Socket) ScanSniff(f *os.File) error {
 
 func (s *Socket) ScanSocket(f *os.File) error {
 	for {
-	Loop:
 		buf := make([]byte, byteSize)
 		num, err := f.Read(buf)
 		fmt.Println("Read ok")
@@ -149,7 +148,6 @@ func (s *Socket) ScanSocket(f *os.File) error {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			} else {
-				goto Loop
 				//	var newData []byte
 				//	var dstMac []byte
 				//	for _, d := range packet.RecData {
