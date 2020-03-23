@@ -124,6 +124,7 @@ func (s *Socket) ScanSocket(f *os.File) error {
 			}
 			fmt.Fprintf(os.Stderr, "Recv %d bytes\n", len(data))
 		}
+		break
 	}
 	return nil
 }
