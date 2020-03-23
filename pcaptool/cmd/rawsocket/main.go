@@ -23,7 +23,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := sock.Start(); err != nil {
+	go func() {
+		if err := sock.Start(); err != nil {
+			panic(err)
+		}
+	}()
+
+	bridgeSock, err := raw.NewSocket(*bridgeDev, raw.OptionBridge(*dev))
+	defer bridgeSock.Close()
+
+	if err := bridgeSock.Start(); err != nil {
 		panic(err)
 	}
 }
