@@ -70,10 +70,10 @@ func OptionBridge(brdev string) func(*Socket) error {
 }
 
 func (s *Socket) Start() error {
-	//err := setPromisc(s.fd, s.dev)
-	//if err != nil {
-	//	return err
-	//}
+	err := setPromisc(s.fd, s.dev)
+	if err != nil {
+		return err
+	}
 
 	file := getFile(s.fd)
 	return s.ScanSocket(file)
