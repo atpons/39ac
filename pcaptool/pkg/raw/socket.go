@@ -75,6 +75,9 @@ func (s *Socket) Start() error {
 		return err
 	}
 
+	bridgeFile := getFile(s.bridgeFd)
+	go s.BridgeSocket(bridgeFile)
+
 	file := getFile(s.fd)
 	return s.ScanSocket(file)
 }
@@ -98,6 +101,23 @@ func setPromisc(fd int, dev string) error {
 
 func getFile(fd int) *os.File {
 	return os.NewFile(uintptr(fd), "")
+}
+
+func (s *Socket) BridgeSocket(bridgeFile *os.File) error {
+	for {
+		buf := make([]byte, byteSize)
+		num, err := bridgeFile.Read(buf)
+		if err != nil {
+			break
+		}
+		data := buf[:num]
+		if s.bridgeFd != 0 {
+			if _, err := syscall.Write(s.fd, data); err != nil {
+				fmt.Fprintf(os.Stderr, "[-] Bridge Error: %v\n", err)
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Socket) ScanSocket(f *os.File) error {
@@ -124,7 +144,6 @@ func (s *Socket) ScanSocket(f *os.File) error {
 			}
 			fmt.Fprintf(os.Stderr, "Recv %d bytes\n", len(data))
 		}
-		break
 	}
 	return nil
 }
