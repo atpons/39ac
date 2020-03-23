@@ -5,13 +5,11 @@ import (
 	"log"
 	"net"
 	"os"
-	"reflect"
 	"syscall"
 
 	"golang.org/x/sys/unix"
 
 	"github.com/atpons/39ac/pcaptool/pkg/pcap"
-	"github.com/atpons/39ac/pcaptool/pkg/store"
 )
 
 const (
@@ -140,73 +138,74 @@ func (s *Socket) ScanSocket(f *os.File) error {
 		if err != nil {
 			break
 		} else {
-			var addr syscall.SockaddrLinklayer
+			//var addr syscall.SockaddrLinklayer
 			data := buf[:num]
-			//if s.BridgeFd != 0 {
-			//	if _, err := syscall.Write(s.BridgeFd, data); err != nil {
-			//		fmt.Fprintf(os.Stderr, "[-] Bridge Error: %v\n", err)
-			//	}
-			//}
-			packet, err := pcap.ReadRawPacket(data)
+			if s.BridgeFd != 0 {
+				if _, err := syscall.Write(s.BridgeFd, data); err != nil {
+					fmt.Fprintf(os.Stderr, "[-] Bridge Error: %v\n", err)
+				}
+			}
+			_, err := pcap.ReadRawPacket(data)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			} else {
-				var newData []byte
-				var dstMac []byte
-				for _, d := range packet.RecData {
-					d.Print()
-					if s.BridgeFd != 0 {
-						if v, ok := d.(*pcap.IP); ok {
-							dstMac, err = store.Global.GetARP(v.Dst.To4())
-							if err != nil {
-								log.Printf("dstMac not dound: err=%v reqDst=%v", err, v.Dst.To4())
-								goto Loop
-							}
-							v.TTL -= 1
-
-						}
-					}
-				}
-				for _, d := range packet.RecData {
-					if s.BridgeFd != 0 {
-						if v, ok := d.(*pcap.Ethernet); ok {
-							if len(dstMac) < 6 {
-								log.Printf("dstMac error dstMac=%v", dstMac)
-								goto Loop
-							}
-							iface, _ := net.InterfaceByName(s.Dev)
-							//if !bytes.Equal(iface.HardwareAddr, v.Dst) {
-							//	log.Printf("[-] Not Match MAC: HWAddr: %#v, DstMac: %#v", iface.HardwareAddr, v.Dst)
-							//	goto Loop
-							//}
-							copy(v.Dst[0:6], dstMac[0:6])
-							var dstMacByte [8]byte
-							copy(dstMacByte[0:6], dstMac[0:6])
-							if reflect.DeepEqual(v.Src[0:6], v.Dst[0:6]) {
-								log.Printf("reject by match dst and src")
-								continue
-								//goto Loop
-							} else {
-								log.Printf("routing packet to %v", v)
-							}
-							copy(v.Src[0:6], iface.HardwareAddr[0:6])
-							log.Printf("routing packet to %x -> %x, %v", v.Src, v.Dst, v)
-							addr = syscall.SockaddrLinklayer{
-								Protocol: syscall.ETH_P_IP,
-								Halen:    6,
-								Ifindex:  iface.Index,
-								Addr:     dstMacByte,
-							}
-						}
-					}
-					newData = append(newData, d.Bytes()...)
-				}
-				log.Printf("Sendto from %s to %X", s.Dev, addr.Addr)
-				if err := syscall.Sendto(s.Fd, newData, 0, &addr); err != nil {
-					log.Println(err)
-				} else {
-					log.Printf("[*] Send OK")
-				}
+				goto Loop
+				//	var newData []byte
+				//	var dstMac []byte
+				//	for _, d := range packet.RecData {
+				//		d.Print()
+				//		if s.BridgeFd != 0 {
+				//			if v, ok := d.(*pcap.IP); ok {
+				//				dstMac, err = store.Global.GetARP(v.Dst.To4())
+				//				if err != nil {
+				//					log.Printf("dstMac not dound: err=%v reqDst=%v", err, v.Dst.To4())
+				//					goto Loop
+				//				}
+				//				v.TTL -= 1
+				//
+				//			}
+				//		}
+				//	}
+				//	for _, d := range packet.RecData {
+				//		if s.BridgeFd != 0 {
+				//			if v, ok := d.(*pcap.Ethernet); ok {
+				//				if len(dstMac) < 6 {
+				//					log.Printf("dstMac error dstMac=%v", dstMac)
+				//					goto Loop
+				//				}
+				//				iface, _ := net.InterfaceByName(s.Dev)
+				//				//if !bytes.Equal(iface.HardwareAddr, v.Dst) {
+				//				//	log.Printf("[-] Not Match MAC: HWAddr: %#v, DstMac: %#v", iface.HardwareAddr, v.Dst)
+				//				//	goto Loop
+				//				//}
+				//				copy(v.Dst[0:6], dstMac[0:6])
+				//				var dstMacByte [8]byte
+				//				copy(dstMacByte[0:6], dstMac[0:6])
+				//				if reflect.DeepEqual(v.Src[0:6], v.Dst[0:6]) {
+				//					log.Printf("reject by match dst and src")
+				//					continue
+				//					//goto Loop
+				//				} else {
+				//					log.Printf("routing packet to %v", v)
+				//				}
+				//				copy(v.Src[0:6], iface.HardwareAddr[0:6])
+				//				log.Printf("routing packet to %x -> %x, %v", v.Src, v.Dst, v)
+				//				addr = syscall.SockaddrLinklayer{
+				//					Protocol: syscall.ETH_P_IP,
+				//					Halen:    6,
+				//					Ifindex:  iface.Index,
+				//					Addr:     dstMacByte,
+				//				}
+				//			}
+				//		}
+				//		newData = append(newData, d.Bytes()...)
+				//	}
+				//	log.Printf("Sendto from %s to %X", s.Dev, addr.Addr)
+				//	if err := syscall.Sendto(s.Fd, newData, 0, &addr); err != nil {
+				//		log.Println(err)
+				//	} else {
+				//		log.Printf("[*] Send OK")
+				//	}
 			}
 			fmt.Fprintf(os.Stderr, "Recv %d bytes\n", len(data))
 		}
